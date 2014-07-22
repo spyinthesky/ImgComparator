@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="com.sergey.ImageForm">
+  <grid id="27dc6" binding="rootPanel" layout-manager="BorderLayout" hgap="0" vgap="0">
+    <constraints>
+      <xy x="20" y="20" width="500" height="400"/>
+    </constraints>
+    <properties/>
+    <border type="none"/>
+    <children>
+      <component id="c116b" class="javax.swing.JLabel" binding="imgLable">
+        <constraints border-constraint="West"/>
+        <properties>
+          <text value=""/>
+        </properties>
+      </component>
+      <component id="e2f8b" class="javax.swing.JButton" binding="saveButton">
+        <constraints border-constraint="South"/>
+        <properties>
+          <label value="Save"/>
+          <text value="Save"/>
+        </properties>
+      </component>
+    </children>
+  </grid>
+</form>
