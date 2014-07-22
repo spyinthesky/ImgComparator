@@ -8,7 +8,6 @@ import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 
 class Pixel implements Comparable<Pixel>{
@@ -91,6 +90,12 @@ class Pixel implements Comparable<Pixel>{
         else
             return 0;
     }
+
+    @Override
+    public boolean equals(Object o){
+        if((Pixel)o.)
+    }
+
 }
 
 public class ImgUtills {
@@ -139,8 +144,8 @@ public class ImgUtills {
     }
 
     public static void checkBelongs(ArrayList<int[]> worklist, ArrayList<int[]> result, int[] current, int sparseness){
-        for(int i=0; i< sparseness; i++){
-            for (int j = 0; j <sparseness ; j++) {
+        for(int i=1; i<=sparseness; i++){
+            for (int j = 1; j <=sparseness ; j++) {
                 int[] arr1=new int[]{current[0]+i,current[1]};
                 int[] arr2=new int[]{current[0]+i,current[1]+j};
                 int[] arr3=new int[]{current[0],current[1]+j};
