@@ -21,6 +21,7 @@ public class ImageForm extends JFrame {
 
     public void updateImage(BufferedImage img){
         image=img;
+        imgLable.setIcon(new ImageIcon(image));
         imgLable.updateUI();
     }
     public ImageForm(BufferedImage img){

@@ -10,126 +10,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-class Pixel implements Comparable<Pixel>{
-    private int x;
-    private int y;
-    private int rgb;
-    private int red;
-    private int blue;
-    private int green;
-    private int comparelimit = 130;
+
+public class ImgUtills  {
 
 
-    public Pixel(int X, int Y, int RGB){
-        x=X;
-        y=Y;
-        rgb=RGB;
-        red = (RGB >>16) & 0xFF;
-        green = (RGB>>8) & 0xFF;
-        blue = RGB &0xFF;
-    }
-
-    public Pixel(Pixel p){
-        this.x = p.getX();
-        this.y=p.getY();
-        this.rgb=p.getRgb();
-        this.red=p.getRed();
-        this.green=p.getGreen();
-        this.blue=p.getBlue();
-        this.comparelimit=p.getComparelimit();
-    }
-
-    public void setCompareLimit(int lim){
-        if(lim<=100 && lim>=0){
-            comparelimit = (255*3)*(lim/100);
-        }
-        else
-            throw new RuntimeException("Wrong limit. Limit must be from 0 to 100");
-    }
-
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public void setY(int y) {
-        this.y = y;
-    }
-
-    public int getRgb() {
-        return rgb;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public int getGreen() {
-        return green;
-    }
-
-    public int getRed() {
-        return red;
-    }
-
-    public int getBlue() {
-        return blue;
-    }
-
-    public int getComparelimit() {
-        return comparelimit;
-    }
-
-    @Override
-    public int compareTo(Pixel another){
-        if(Math.abs((this.red+this.green+this.blue)-(another.getRed()+another.getGreen() + another.getBlue()))>=comparelimit)
-            return -1;
-        else
-            return 0;
-    }
-
-    @Override
-    public boolean equals(Object o){
-        if((Pixel)o.)
-    }
-
-}
-
-public class ImgUtills {
-
-    public static String getExt(File f){
-        String name = f.getName();
-        return name.contains(".") ? name.substring(name.lastIndexOf('.') +1, name.length()) : "";
-    }
-    public static ArrayList<int[]> getCorners(ArrayList<ArrayList<int[]>> inData) {
-        ArrayList<int[]> result = new ArrayList<>();
-        Iterator<ArrayList<int[]>> iter = inData.iterator();
-        while (iter.hasNext()) {
-            ArrayList<int[]> current = iter.next();
-            int[] leftup = new int[]{current.get(0)[0],current.get(0)[1]};
-            int[] rightdown = new int[]{current.get(0)[0],current.get(0)[1]};
-            for (int i = 0; i < current.size(); i++) {
-                if((current.get(i)[0]<leftup[0])){
-                    leftup[0] = current.get(i)[0];
-                }
-                if((current.get(i)[1]<leftup[1])){
-                    leftup[1] = current.get(i)[1];
-                }
-                if((current.get(i)[0]>rightdown[0])){
-                    rightdown[0] =current.get(i)[0];
-                }
-                if((current.get(i)[1]>rightdown[1])){
-                    rightdown[0] = current.get(i)[1];
-                }
-            }
-            result.add(new int[]{leftup[0], leftup[1], rightdown[0], rightdown[1]});
-        }
-        return result;
-    }
-
+    //Методы сравнивают пиксели по цвету в стандартном режиме и с возможностью изменения пределов сравнения.
     public static int compareRGB(int RGB1, int RGB2, int compareLimit){
         Pixel px1= new Pixel(0,0,RGB1);
         Pixel px2 = new Pixel(0,0,RGB2);
@@ -143,60 +28,170 @@ public class ImgUtills {
         return px1.compareTo(px2);
     }
 
-    public static void checkBelongs(ArrayList<int[]> worklist, ArrayList<int[]> result, int[] current, int sparseness){
+    //Метод находит все отличные пиксели на двух изображениях.
+    public static ArrayList<Pixel> getDiffs(BufferedImage first, BufferedImage second){
+        ArrayList<Pixel> result = new ArrayList<>();
+        for(int i=0; i<first.getWidth(); i++){
+            for(int j=0; j<first.getHeight(); j++){
+                if(compareRGB(first.getRGB(i,j), second.getRGB(i,j))<0) {
+                    Pixel p = new Pixel(i,j,second.getRGB(i,j));
+                    result.add(p);
+                }
+            }
+        }
+        return result;
+    }
+
+    // Метод сортирует массив найденных отличий по группам
+    public static ArrayList<ArrayList<Pixel>> sort(ArrayList<Pixel> pixels, int sparseness){
+        ArrayList<ArrayList<Pixel>> result = new ArrayList<>();
+        ArrayList<Pixel> singleResult;
+        while(pixels.size()>0){
+            singleResult = new ArrayList<Pixel>();
+            Pixel current= pixels.get(0);
+            singleResult.add(current);
+            pixels.remove(current);
+            checkBelongs(pixels, singleResult, current, sparseness);
+            result.add(singleResult);
+        }
+        return result;
+    }
+
+    // Дополнительный метод, который рекурсивно ищет соседние точки для пикселя во входных данных
+    public static void checkBelongs(ArrayList<Pixel> worklist, ArrayList<Pixel> result, Pixel current, int sparseness){
         for(int i=1; i<=sparseness; i++){
             for (int j = 1; j <=sparseness ; j++) {
-                int[] arr1=new int[]{current[0]+i,current[1]};
-                int[] arr2=new int[]{current[0]+i,current[1]+j};
-                int[] arr3=new int[]{current[0],current[1]+j};
-                int[] arr4=new int[]{current[0]-i,current[1]+j};
-                int[] arr5=new int[]{current[0]-i,current[1]};
-                int[] arr6=new int[]{current[0]-i,current[1]-j};
-                int[] arr7=new int[]{current[0],current[1]-j};
-                int[] arr8=new int[]{current[0]+i,current[1]-j};
-                if(worklist.contains(arr1)){
-                    result.add(arr1);
-                    worklist.remove(arr1);
-                    checkBelongs(worklist, result, arr1, sparseness);
+                Pixel px1 = new Pixel(current.getX()+i, current.getY(),0);
+                Pixel px2 = new Pixel(current.getX()+i, current.getY()+j,0);
+                Pixel px3 = new Pixel(current.getX(), current.getY()+j,0);
+                Pixel px4 = new Pixel(current.getX()-i, current.getY()+j,0);
+                Pixel px5 = new Pixel(current.getX()-i, current.getY(),0);
+                Pixel px6 = new Pixel(current.getX()-i, current.getY()-j,0);
+                Pixel px7 = new Pixel(current.getX(), current.getY()-j,0);
+                Pixel px8 = new Pixel(current.getX()+i, current.getY()-j,0);
+                if(worklist.contains(px1)){
+                    result.add(px1);
+                    worklist.remove(px1);
+                    checkBelongs(worklist, result, px1, sparseness);
                 }
-                if(worklist.contains(arr2)){
-                    result.add(arr2);
-                    worklist.remove(arr2);
-                    checkBelongs(worklist, result, arr2, sparseness);
+                if(worklist.contains(px2)){
+                    result.add(px2);
+                    worklist.remove(px2);
+                    checkBelongs(worklist, result, px2, sparseness);
                 }
-                if(worklist.contains(arr3)){
-                    result.add(arr3);
-                    worklist.remove(arr3);
-                    checkBelongs(worklist, result, arr3, sparseness);
+                if(worklist.contains(px3)){
+                    result.add(px3);
+                    worklist.remove(px3);
+                    checkBelongs(worklist, result, px3, sparseness);
                 }
-                if(worklist.contains(arr4)){
-                    result.add(arr4);
-                    worklist.remove(arr4);
-                    checkBelongs(worklist, result, arr4, sparseness);
+                if(worklist.contains(px4)){
+                    result.add(px4);
+                    worklist.remove(px4);
+                    checkBelongs(worklist, result, px4, sparseness);
                 }
-                if(worklist.contains(arr5)){
-                    result.add(arr5);
-                    worklist.remove(arr5);
-                    checkBelongs(worklist, result, arr5, sparseness);
+                if(worklist.contains(px5)){
+                    result.add(px5);
+                    worklist.remove(px5);
+                    checkBelongs(worklist, result, px5, sparseness);
                 }
-                if(worklist.contains(arr6)){
-                    result.add(arr6);
-                    worklist.remove(arr6);
-                    checkBelongs(worklist, result, arr6, sparseness);
+                if(worklist.contains(px6)){
+                    result.add(px6);
+                    worklist.remove(px6);
+                    checkBelongs(worklist, result, px6, sparseness);
                 }
-                if(worklist.contains(arr7)){
-                    result.add(arr7);
-                    worklist.remove(arr7);
-                    checkBelongs(worklist, result, arr7, sparseness);
+                if(worklist.contains(px7)){
+                    result.add(px7);
+                    worklist.remove(px7);
+                    checkBelongs(worklist, result, px7, sparseness);
                 }
-                if(worklist.contains(arr8)){
-                    result.add(arr8);
-                    worklist.remove(arr8);
-                    checkBelongs(worklist, result, arr8, sparseness);
+                if(worklist.contains(px8)){
+                    result.add(px8);
+                    worklist.remove(px8);
+                    checkBelongs(worklist, result, px8, sparseness);
                 }
             }
         }
     }
+
+    //Метод возвращает крайние точки прямоугольника, который содержит внутри себя все точки представленные в массиве входных данных
+    public static ArrayList<int[]> getCorners(ArrayList<ArrayList<Pixel>> inData) {
+        ArrayList<int[]> result = new ArrayList<>();
+        Iterator<ArrayList<Pixel>> iter = inData.iterator();
+        while (iter.hasNext()) {
+            ArrayList<Pixel> current = iter.next();
+            Pixel leftup = new Pixel(current.get(0));
+            Pixel rightdown = new Pixel(current.get(0));
+            for (int i = 0; i < current.size(); i++) {
+                if((current.get(i).getX()<leftup.getX())){
+                    leftup.setX(current.get(i).getX());
+                }
+                if((current.get(i).getY()<leftup.getY())){
+                    leftup.setY(current.get(i).getY());
+                }
+                if((current.get(i).getX()>rightdown.getX())){
+                    rightdown.setX(current.get(i).getX());
+                }
+                if((current.get(i).getY()>rightdown.getY())){
+                    rightdown.setY(current.get(i).getY());
+                }
+            }
+            result.add(new int[]{leftup.getX(), leftup.getY(), rightdown.getX(), rightdown.getY()});
+        }
+        return result;
+    }
+
+    // Метод рисует на заданном изображении квадрат в соответствии с заданными координатами верхней левой и нижней правой точки.
+    public static void drawSquare(int[] coords, BufferedImage img, int correction){
+        if(coords.length<2)
+            throw new RuntimeException("Wrong coords. There must be 2 packs of coords");
+        else{
+            Graphics2D gr = img.createGraphics();
+            gr.setColor(Color.RED);
+            gr.drawLine(coords[0]-correction,coords[1]-correction, coords[2]+correction, coords[1]-correction);
+            gr.drawLine(coords[2]+correction,coords[1]-correction, coords[2]+correction, coords[3]+correction);
+            gr.drawLine(coords[2]+correction,coords[3]+correction, coords[0]-correction, coords[3]+correction);
+            gr.drawLine(coords[0]-correction,coords[3]+correction, coords[0]-correction, coords[1]-correction);
+            gr.dispose();
+        }
+    }
+
+    //Метод получает расширение файла или возвращает пустую строку в случае его отсутствия
+    public static String getExt(File f){
+        String name = f.getName();
+        return name.contains(".") ? name.substring(name.lastIndexOf('.') +1, name.length()) : "";
+    }
+
+    //Общий метод для сравнения двух изображений. Параметр sparseness определяет на сколько пикселей могут отстоять пиксели с отличием при группировке. Возвращает новое изображение, с обведенными красным цветом найденными отличиями.
+    public static BufferedImage compareImg(BufferedImage img1, BufferedImage img2, int sparseness){
+        ArrayList<int[]> corners =getCorners(sort(getDiffs(img1, img2), sparseness));
+        ColorModel img2cm = img2.getColorModel();
+        boolean isAlphaPremultiplied = img2cm.isAlphaPremultiplied();
+        WritableRaster img2raster = img2.copyData(null);
+        BufferedImage img3 = new BufferedImage(img2cm, img2raster, isAlphaPremultiplied, null);
+        for(int[] a : corners) {
+            drawSquare(a, img3, 2);
+        }
+        return img3;
+    }
+
+    //Общий метод для изменения точности
+    public static BufferedImage changeAcc(BufferedImage img, int sparseness,  ArrayList<Pixel> diffs){
+        ArrayList<Pixel> newdiffs = new ArrayList<>();
+        for(Pixel p : diffs){
+            newdiffs.add(new Pixel(p));
+        }
+        ArrayList<int[]> corners =getCorners(sort(newdiffs, sparseness));
+        ColorModel img2cm = img.getColorModel();
+        boolean isAlphaPremultiplied = img2cm.isAlphaPremultiplied();
+        WritableRaster img2raster = img.copyData(null);
+        BufferedImage img3 = new BufferedImage(img2cm, img2raster, isAlphaPremultiplied, null);
+        for(int[] a : corners) {
+            drawSquare(a, img3, 2);
+        }
+        return img3;
+    }
+
+    //Метод пропорционально сжимает изображения до размеров соответствующим входной высоте и ширине
     public static BufferedImage scaleImg(BufferedImage img, int newW, int newH){
         float scaleFactor;
         int scaledH=0, scaledW=0;
@@ -221,73 +216,27 @@ public class ImgUtills {
         return result;
     }
 
-    public static BufferedImage compareImg(BufferedImage img1, BufferedImage img2, int sparseness){
-        ArrayList<int[]> corners =getCorners(sort(getDiffs(img1, img2), sparseness));
-        ColorModel img2cm = img2.getColorModel();
-        boolean isAlphaPremultiplied = img2cm.isAlphaPremultiplied();
-        WritableRaster img2raster = img2.copyData(null);
-        BufferedImage img3 = new BufferedImage(img2cm, img2raster, isAlphaPremultiplied, null);
-        for(int[] a : corners) {
-            drawSquare(a, img3, 2);
-        }
-        return img3;
-    }
-
-    public static void drawSquare(int[] coords, BufferedImage img, int correction){
-        if(coords.length<2)
-            throw new RuntimeException("Wrong coords. There must be 2 packs of coords");
-        else{
-            Graphics2D gr = img.createGraphics();
-            gr.setColor(Color.RED);
-            gr.drawLine(coords[0]-correction,coords[1]-correction, coords[2]+correction, coords[2]-correction);
-            gr.drawLine(coords[2]+correction,coords[1]-correction, coords[2]+correction, coords[3]+correction);
-            gr.drawLine(coords[2]+correction,coords[3]+correction, coords[0]-correction, coords[3]+correction);
-            gr.drawLine(coords[0]-correction,coords[3]+correction, coords[0]-correction, coords[1]-correction);
-            gr.dispose();
-        }
-    }
-
-
-    public static ArrayList<ArrayList<int[]>> sort(ArrayList<int[]> pixels, int sparseness){
-        ArrayList<ArrayList<int[]>> result = new ArrayList<>();
-        ArrayList<int[]> singleResult;
-        while(pixels.size()>0){
-            singleResult = new ArrayList<int[]>();
-            int[] current= pixels.get(0);
-            singleResult.add(current);
-            pixels.remove(current);
-            checkBelongs(pixels, singleResult, current, sparseness);
-            result.add(singleResult);
-        }
-
-        return result;
-    }
-
-
-    public static ArrayList<int[]> getDiffs(BufferedImage first, BufferedImage second){
-        ArrayList<int[]> result = new ArrayList<>();
-        for(int i=0; i<first.getWidth(); i++){
-            for(int j=0; j<first.getHeight(); j++){
-                if(compareRGB(first.getRGB(i,j), second.getRGB(i,j))<0) {
-                    int[] arr = {i,j};
-                    result.add(arr);
-                }
-            }
-        }
-        return result;
-    }
-
     public static void main(String[] args) throws IOException {
         new Thread(null, new Runnable() {
             public void run() {
 
                 try {
-                    BufferedImage one = ImageIO.read(new File("D://ImgData/dino.png"));
-                    BufferedImage two = ImageIO.read(new File("D://ImgData/dino2.png"));
-                    BufferedImage three = compareImg(one, two, 5);
+                    BufferedImage one = ImageIO.read(new File("E://Java/Images/Bob.png"));
+                    BufferedImage two = ImageIO.read(new File("E://Java/Images/Bob2.png"));
+                    BufferedImage three = compareImg(one, two, 15);
                     BufferedImage four = scaleImg(three, 300,200);
-                    ImageIO.write(three, "png", new File("D://ImgData/RESULT.png"));
-                    ImageIO.write(four, "png", new File("D://ImgData/SCALED.png"));
+                    BufferedImage five = new BufferedImage(one.getWidth(), one.getHeight(), BufferedImage.TYPE_INT_ARGB);
+                    ArrayList<Pixel> diffs = getDiffs(one,two);
+                    for(Pixel p: diffs){
+                        five.setRGB(p.getX(),p.getY(),p.getRgb());
+                    }
+
+                    ImageIO.write(three, "png", new File("E://Java/Images/RESULT.png"));
+                    ImageIO.write(four, "png", new File("E://Java/Images/SCALED.png"));
+                    ImageIO.write(five, "png", new File("E://Java/Images/DIFFS.png"));
+                    File f = new File("load");
+                    f.createNewFile();
+                    System.out.println(f.exists());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

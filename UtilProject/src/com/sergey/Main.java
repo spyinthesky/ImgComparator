@@ -9,7 +9,7 @@ public class Main {
             public void run() {
                 new MainForm();
             }
-        }, "1", 1 << 30).start();
+        }, "1").start();
 
     }
 }

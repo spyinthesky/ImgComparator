@@ -11,14 +11,18 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 /**
  * Created by alex on 17.07.2014.
  */
-public class MainForm extends JFrame{
+
+public class MainForm extends JFrame {
     private JPanel rootPanel;
     private JFormattedTextField secondImageInput;
     private JFormattedTextField firstImageInput;
@@ -40,30 +44,40 @@ public class MainForm extends JFrame{
     private BufferedImage img1;
     private BufferedImage img2;
     private BufferedImage img3;
-    private BufferedImage scaledImg1;
-    private BufferedImage scaledImg3;
     private ImageForm form1;
     private ImageForm form2;
+    private MainWorker worker1;
+    private MainWorker worker2;
+    private ArrayList<Pixel> diffs;
+    private CallBackImpl lbl1changer;
+    private CallBackImpl lbl2changer;
+    private BufferedImage load;
 
 
-    public MainForm(){
+    public MainForm() {
+
         super("Image comarator");
-        rootPanel.setSize(50,50);
+        try {
+            load = ImageIO.read(new File("load.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        lbl1changer = new CallBackImpl(lbl1);
+        lbl2changer = new CallBackImpl(lbl2);
+        rootPanel.setSize(50, 50);
         setContentPane(rootPanel);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         titleLable.setText("Input the first image file");
-        currentAccuracy=slider1.getValue();
+        currentAccuracy = slider1.getValue();
         lableAcc.setText("Accuracy: " + currentAccuracy);
         lableAcc.setForeground(Color.RED);
-        pack();
-        setVisible(true);
         fc = new JFileChooser();
         fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
         fc.setFileFilter(new FileFilter() {
             @Override
             public boolean accept(File f) {
 
-                return ImgUtills.getExt(f).equals("png");
+                return ImgUtills.getExt(f).equals("png")||f.isDirectory();
             }
 
             @Override
@@ -76,10 +90,9 @@ public class MainForm extends JFrame{
             @Override
             public void mouseClicked(MouseEvent e) {
                 log.info("Mouse click on lbl1");
-                if(form1==null){
-                    form1=new ImageForm(img1);
-                }
-                else{
+                if (form1 == null) {
+                    form1 = new ImageForm(img1);
+                } else {
                     form1.updateImage(img1);
                     form1.setVisible(true);
                 }
@@ -110,10 +123,9 @@ public class MainForm extends JFrame{
             @Override
             public void mouseClicked(MouseEvent e) {
                 log.info("Mouse click on lbl2");
-                if(form2==null){
-                    form2=new ImageForm(img3);
-                }
-                else{
+                if (form2 == null) {
+                    form2 = new ImageForm(img3);
+                } else {
                     form2.updateImage(img3);
                     form2.setVisible(true);
                 }
@@ -143,72 +155,134 @@ public class MainForm extends JFrame{
         slider1.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
-                currentAccuracy=slider1.getValue();
+                currentAccuracy = slider1.getValue();
                 lableAcc.setText("Accuracy: " + currentAccuracy);
-                if(img2!=null && img1!=null){
-                    img3 = ImgUtills.compareImg(img1, img2, currentAccuracy);
-                    scaledImg3 = ImgUtills.scaleImg(img3, 300,200);
-                    lbl2.setIcon(new ImageIcon(scaledImg3));
-                    lbl2.updateUI();
-                }
             }
         });
-        
-        firstImageView.addActionListener(new ActionListener(){
+        slider1.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                currentAccuracy = slider1.getValue();
+                if (worker2 == null || worker2.isDone()) {
+                    worker2 = new MainWorker();
+                } else {
+                    worker2.cancel(true);
+                    worker2 = new MainWorker();
+                }
+                worker2.setUi(lbl2changer);
+                worker2.setSecond(img2);
+                worker2.setAcc(currentAccuracy);
+                worker2.setDiffs(diffs);
+                worker2.setWhatToDo(MainWorker.DO_CHANGE_ACC);
+                worker2.addPropertyChangeListener(new PropertyChangeListener() {
+                    @Override
+                    public void propertyChange(PropertyChangeEvent evt) {
+                        if (evt.getNewValue().toString().equals("DONE")) {
+                            try {
+                                img3 = worker2.get().getImg();
+                                diffs = worker2.get().getDifData();
+                                ImageIO.write(img3, "png", new File("E://Java/Images/RESULT.png"));
+                            } catch (Exception e1) {
+                                e1.printStackTrace();
+                            }
+                        }
+                    }
+                });
+                lbl2changer.updateUI(load);
+                worker2.execute();
+
+
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+
+            }
+        });
+
+        firstImageView.addActionListener(new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                log.info("Chooser1 opened");
                 fc.setCurrentDirectory(new File("D://ImgData"));
 
                 int returnVal = fc.showOpenDialog(MainForm.this);
 
-                if(returnVal == JFileChooser.APPROVE_OPTION){
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
                     firstImageInput.setText(fc.getSelectedFile().getAbsolutePath());
                 }
-                log.info("Chooser1 closed");
-            }
+        }
         });
         firstImageOk.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 firstFile = new File(firstImageInput.getText());
-                if(firstFile.exists()){
-                    if(ImgUtills.getExt(firstFile).equals("png")){
-                        try {
-                            img1 = ImageIO.read(firstFile);
-                        } catch (IOException e1) {
-                            e1.printStackTrace();
+                if (firstFile.exists()) if (ImgUtills.getExt(firstFile).equals("png")) {
+                    try {
+                        img1 = ImageIO.read(firstFile);
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                    if (worker1 == null || worker1.isDone()) {
+                        worker1 = new MainWorker();
+                    } else {
+                        worker1.cancel(true);
+                        worker1 = new MainWorker();
+                    }
+                    worker1.setUi(lbl1changer);
+                    worker1.setFirst(img1);
+                    worker1.setWhatToDo(MainWorker.DO_SCALING);
+                    worker1.addPropertyChangeListener(new PropertyChangeListener() {
+                        @Override
+                        public void propertyChange(PropertyChangeEvent evt) {
+                            if (evt.getNewValue().toString().equals("DONE")) {
+                                try {
+                                    img1 = worker1.get().getImg();
+                                } catch (Exception e1) {
+                                    e1.printStackTrace();
+                                }
+                            }
                         }
-                        scaledImg1 = ImgUtills.scaleImg(img1, 300,200);
-                        lbl1.setIcon(new ImageIcon(scaledImg1));
-                        lbl1.setPreferredSize(new Dimension(scaledImg1.getWidth()+2, scaledImg1.getHeight()+2));
-                        lbl1.updateUI();
+                    });
+                    log.info("Before worker1 execute");
+                    lbl1changer.updateUI(load);
+                    worker1.execute();
 
-                    }
-                    else{
-                        JOptionPane.showMessageDialog(MainForm.this, "The file has a wrong extension. Need to be .png");
-                    }
 
+                } else {
+                    JOptionPane.showMessageDialog(MainForm.this, "The file has a wrong extension. Need to be .png");
                 }
-                else{
+                else {
                     JOptionPane.showMessageDialog(MainForm.this, "The file is not exists");
                 }
             }
         });
 
-        secondImageView.addActionListener(new ActionListener(){
+        secondImageView.addActionListener(new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
                 fc.setCurrentDirectory(new File("D://ImgData"));
-                log.info("Chooser2 opened");
                 int returnVal = fc.showOpenDialog(MainForm.this);
 
-                if(returnVal == JFileChooser.APPROVE_OPTION){
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
                     secondImageInput.setText(fc.getSelectedFile().getAbsolutePath());
                 }
-                log.info("Chooser2 closed");
             }
         });
 
@@ -216,31 +290,62 @@ public class MainForm extends JFrame{
             @Override
             public void actionPerformed(ActionEvent e) {
                 secondFile = new File(secondImageInput.getText());
-                if(firstFile.exists()){
-                    if(ImgUtills.getExt(secondFile).equals("jpg")||ImgUtills.getExt(secondFile).equals("png")||ImgUtills.getExt(secondFile).equals("gif")) {
+                if (firstFile.exists()) {
+                    if (ImgUtills.getExt(secondFile).equals("jpg") || ImgUtills.getExt(secondFile).equals("png") || ImgUtills.getExt(secondFile).equals("gif")) {
                         try {
                             img2 = ImageIO.read(secondFile);
                         } catch (IOException e1) {
                             e1.printStackTrace();
                         }
                         if (img1.getHeight() == img2.getHeight() && img1.getWidth() == img2.getWidth()) {
-                            img3 = ImgUtills.compareImg(img1, img2, currentAccuracy);
-                            scaledImg3 = ImgUtills.scaleImg(img3, 300,200);
-                            lbl2.setIcon(new ImageIcon(scaledImg3));
-                            lbl2.setPreferredSize(new Dimension(scaledImg3.getWidth(), scaledImg3.getHeight()));
-                        } else {
-                            JOptionPane.showMessageDialog(MainForm.this, "The file has a wrong resolution");
-                        }
-                    }
-                    else{
-                        JOptionPane.showMessageDialog(MainForm.this, "The file has a wrong extension. Need to be .gif, .jpg or .png");
-                    }
+                            if (worker2 == null || worker2.isDone()) {
+                                worker2 = new MainWorker();
+                            } else {
+                                worker2.cancel(true);
+                                worker2 = new MainWorker();
+                            }
+                            worker2.setUi(lbl2changer);
+                            worker2.setFirst(img1);
+                            worker2.setSecond(img2);
+                            worker2.setAcc(currentAccuracy);
+                            worker2.setWhatToDo(MainWorker.DO_FULL_COMPARSION);
+                            worker2.addPropertyChangeListener(new PropertyChangeListener() {
+                                @Override
+                                public void propertyChange(PropertyChangeEvent evt) {
+                                    if (evt.getNewValue().toString().equals("DONE")) {
+                                        try {
+                                            img3 = worker2.get().getImg();
+                                            diffs = worker2.get().getDifData();
+                                        } catch (Exception e1) {
+                                            e1.printStackTrace();
+                                        }
+                                    }
+                                }
+                            });
+                            lbl2changer.updateUI(load);
+                            worker2.execute();
 
+                    } else {
+                        JOptionPane.showMessageDialog(MainForm.this, "The file has a wrong resolution");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(MainForm.this, "The file has a wrong extension. Need to be .gif, .jpg or .png");
                 }
-                else{
-                    JOptionPane.showMessageDialog(MainForm.this, "The file is not exists");
-                }
+
             }
-        });
+
+            else
+
+            {
+                JOptionPane.showMessageDialog(MainForm.this, "The file is not exists");
+            }
+        }
     }
+
+    );
+
+    pack();
+
+    setVisible(true);
+}
 }
